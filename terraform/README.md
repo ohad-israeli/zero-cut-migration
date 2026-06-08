@@ -9,8 +9,8 @@ Provisions the **destination** for the zero-cut migration demo:
   `kcp`, the cluster link, and the demo client.
 
 > 💸 **Cost:** an Enterprise cluster bills hourly (and per usage). Run `terraform
-> destroy` when you're done. `availability = "SINGLE_ZONE"` (the default) is the
-> cheaper option; set `HIGH` for multi-AZ.
+> destroy` when you're done. Enterprise requires `availability = "HIGH"` (multi-zone)
+> — Confluent Cloud rejects `SINGLE_ZONE` for Enterprise.
 
 ## Prerequisites
 

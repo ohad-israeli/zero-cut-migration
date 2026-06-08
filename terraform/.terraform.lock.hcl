@@ -5,7 +5,7 @@ provider "registry.terraform.io/confluentinc/confluent" {
   version     = "2.74.0"
   constraints = "~> 2.0"
   hashes = [
-    "h1:15FF5E+2yaY0UrReozij/AIiH8vEQZdhlNd/I/VkE4A=",
+    "h1:6VtfIiROAIRMx+dMVzk+FxwVC/mGLoffLZfS2Icfy4o=",
     "zh:069463d16ab7ea5af2a5164620dcd77890f46ed64fbbe18bf24655aa8c311ba1",
     "zh:22d4f39d0fe23e1e0556d1bfafec30e66cd8451239022df8e12f5de8c3a96eb8",
     "zh:4a66e3e87ca5921a8b461f0fc10cc3b2a6c00c507fc323f7b9fe70eb8181208d",

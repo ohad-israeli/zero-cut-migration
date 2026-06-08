@@ -8,4 +8,4 @@ confluent_cloud_api_secret = "YOUR_CLOUD_API_SECRET"
 # cluster_name     = "zerocut-dest"
 # cloud            = "AWS"          # AWS | AZURE | GCP
 # region           = "us-east-2"
-# availability     = "SINGLE_ZONE"  # SINGLE_ZONE (cheaper) | HIGH (multi-AZ)
+# availability     = "HIGH"          # Enterprise requires HIGH (multi-zone)

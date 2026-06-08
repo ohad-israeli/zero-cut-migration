@@ -36,11 +36,11 @@ variable "region" {
 
 variable "availability" {
   type        = string
-  default     = "SINGLE_ZONE"
-  description = "Enterprise availability: SINGLE_ZONE (cheaper, for demos) or HIGH (multi-AZ)."
+  default     = "HIGH"
+  description = "Enterprise clusters require HIGH (multi-zone); Confluent Cloud rejects SINGLE_ZONE for Enterprise."
   validation {
-    condition     = contains(["SINGLE_ZONE", "HIGH"], var.availability)
-    error_message = "availability must be SINGLE_ZONE or HIGH."
+    condition     = var.availability == "HIGH"
+    error_message = "Enterprise clusters must use availability = HIGH (multi-zone)."
   }
 }
 
