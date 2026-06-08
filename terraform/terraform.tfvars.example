@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in, OR set these as env vars:
+#   export CONFLUENT_CLOUD_API_KEY=...  CONFLUENT_CLOUD_API_SECRET=...
+confluent_cloud_api_key    = "YOUR_CLOUD_API_KEY"
+confluent_cloud_api_secret = "YOUR_CLOUD_API_SECRET"
+
+# Optional overrides:
+# environment_name = "zero-cut-migration"
+# cluster_name     = "zerocut-dest"
+# cloud            = "AWS"          # AWS | AZURE | GCP
+# region           = "us-east-2"
+# availability     = "SINGLE_ZONE"  # SINGLE_ZONE (cheaper) | HIGH (multi-AZ)
