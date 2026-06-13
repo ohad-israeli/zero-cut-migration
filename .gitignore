@@ -1,5 +1,5 @@
 # secrets — never commit
-.env
+.env*
 
 # terraform
 **/.terraform/
@@ -8,5 +8,15 @@
 *.tfvars
 !*.tfvars.example
 
+# gateway CRs rendered with environment-specific values
+gateway/rendered/
+
+# kcp migration state
+migration-state.json
+
 .DS_Store
 *.log
+
+# python
+__pycache__/
+*.pyc

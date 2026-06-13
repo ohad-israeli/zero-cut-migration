@@ -4,17 +4,33 @@ output "environment_id" {
 }
 
 output "cluster_id" {
-  value       = confluent_kafka_cluster.enterprise.id
+  value       = confluent_kafka_cluster.dedicated.id
   description = "Destination Kafka cluster ID (lkc-...)."
 }
 
+# --- Private networking (Private Service Connect) -------------------------------
+output "network_id" {
+  value       = confluent_network.this.id
+  description = "Confluent Cloud network ID (n-...)."
+}
+
+output "dns_domain" {
+  value       = confluent_network.this.dns_domain
+  description = "CC network DNS domain (e.g. <id>.us-east1.gcp.confluent.cloud). Create a private Cloud DNS zone for *.<domain> -> the PSC endpoint IP."
+}
+
+output "psc_service_attachments" {
+  value       = confluent_network.this.gcp[0].private_service_connect_service_attachments
+  description = "Map of GCP zone -> CC service attachment URI. Point a PSC endpoint (forwarding rule) at each."
+}
+
 output "cluster_bootstrap" {
-  value       = replace(confluent_kafka_cluster.enterprise.bootstrap_endpoint, "SASL_SSL://", "")
+  value       = replace(confluent_kafka_cluster.dedicated.bootstrap_endpoint, "SASL_SSL://", "")
   description = "Bootstrap server (host:9092), prefix stripped for kcp --cluster-bootstrap."
 }
 
 output "cluster_rest_endpoint" {
-  value       = confluent_kafka_cluster.enterprise.rest_endpoint
+  value       = confluent_kafka_cluster.dedicated.rest_endpoint
   description = "Kafka REST endpoint (for kcp --cluster-rest-endpoint)."
 }
 
@@ -47,9 +63,9 @@ output "dotenv" {
   sensitive = true
   value     = <<-EOT
     CC_ENVIRONMENT_ID=${confluent_environment.this.id}
-    CC_CLUSTER_ID=${confluent_kafka_cluster.enterprise.id}
-    CC_BOOTSTRAP=${replace(confluent_kafka_cluster.enterprise.bootstrap_endpoint, "SASL_SSL://", "")}
-    CC_REST_ENDPOINT=${confluent_kafka_cluster.enterprise.rest_endpoint}
+    CC_CLUSTER_ID=${confluent_kafka_cluster.dedicated.id}
+    CC_BOOTSTRAP=${replace(confluent_kafka_cluster.dedicated.bootstrap_endpoint, "SASL_SSL://", "")}
+    CC_REST_ENDPOINT=${confluent_kafka_cluster.dedicated.rest_endpoint}
     CC_API_KEY=${confluent_api_key.cluster.id}
     CC_API_SECRET=${confluent_api_key.cluster.secret}
     CC_SR_URL=${data.confluent_schema_registry_cluster.sr.rest_endpoint}

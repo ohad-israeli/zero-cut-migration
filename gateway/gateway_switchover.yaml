@@ -1,0 +1,67 @@
+# SWITCHOVER state — the Gateway now points at CONFLUENT CLOUD. The client-facing
+# endpoint (${GATEWAY_LB_HOST}:9595) and client auth (none) are unchanged, so clients
+# never reconnect to a new address or learn new credentials. The Gateway swaps in the
+# Confluent Cloud SASL/PLAIN credentials (API key/secret) on the back side via the
+# file secret store. Path passed to:
+#   kcp migration init --switchover-cr-yaml gateway_switchover.yaml
+#
+# Requires the secrets created by ./secrets.sh (tls, file-store-config,
+# file-store-noauth-credentials, plain-jaas) in the same namespace.
+apiVersion: platform.confluent.io/v1beta1
+kind: Gateway
+metadata:
+  labels:
+    app.kubernetes.io/name: confluent-for-kubernetes
+    app.kubernetes.io/managed-by: kustomize
+  name: migration-gateway
+spec:
+  replicas: 1
+  image:
+    application: ${GATEWAY_IMAGE}
+    init: confluentinc/confluent-init-container:3.2.0
+  podTemplate:
+    envVars:
+      - name: GATEWAY_ROOT_LOG_LEVEL
+        value: INFO
+  secretStores:
+    - name: file-store
+      provider:
+        type: File
+        configSecretRef: file-store-config
+        clientCredentialsRef: file-store-noauth-credentials
+  streamingDomains:
+    - name: confluent-cloud
+      type: kafka
+      kafkaCluster:
+        bootstrapServers:
+          - id: SASL_PLAIN
+            endpoint: SASL_SSL://${CC_BOOTSTRAP}
+            tls:
+              secretRef: tls
+        nodeIdRanges:
+          - name: pool-1
+            start: 0
+            end: 17
+  routes:
+    - name: migration-route
+      endpoint: ${GATEWAY_LB_HOST}:9595
+      brokerIdentificationStrategy:
+        type: port
+      streamingDomain:
+        name: confluent-cloud
+        bootstrapServerId: SASL_PLAIN
+      security:
+        auth: swap
+        secretStore: file-store
+        client:
+          authentication:
+            type: none
+        cluster:
+          authentication:
+            type: plain
+            jaasConfigPassThrough:
+              secretRef: plain-jaas
+  externalAccess:
+    type: loadBalancer
+    loadBalancer:
+      domain: ${GATEWAY_LB_HOST}

@@ -1,0 +1,50 @@
+# INITIAL state — the Gateway routes clients to the SOURCE (open-source Kafka).
+# Clients point their bootstrap at ${GATEWAY_LB_HOST}:9595 and stay there forever.
+# Apply this first:  kubectl apply -f gateway_init.yaml -n <namespace>
+# `kcp migration init --initial-cr-name migration-gateway` reads it back from k8s.
+#
+# Render real values first:  ./render.sh   (substitutes ${...} from ../.env + env)
+apiVersion: platform.confluent.io/v1beta1
+kind: Gateway
+metadata:
+  labels:
+    app.kubernetes.io/name: confluent-for-kubernetes
+    app.kubernetes.io/managed-by: kustomize
+  name: migration-gateway
+spec:
+  replicas: 1
+  image:
+    application: ${GATEWAY_IMAGE}
+    init: confluentinc/confluent-init-container:3.2.0
+  podTemplate:
+    envVars:
+      - name: GATEWAY_ROOT_LOG_LEVEL
+        value: INFO
+  streamingDomains:
+    - name: source-kafka-cluster
+      type: kafka
+      kafkaCluster:
+        bootstrapServers:
+          - id: UNAUTHED
+            endpoint: PLAINTEXT://${SOURCE_BOOTSTRAP_HOST}:9094
+        nodeIdRanges:
+          - name: pool-1
+            start: 1
+            end: 1
+  routes:
+    - name: migration-route
+      endpoint: ${GATEWAY_LB_HOST}:9595
+      brokerIdentificationStrategy:
+        type: port
+      streamingDomain:
+        name: source-kafka-cluster
+        bootstrapServerId: UNAUTHED
+      security:
+        client:
+          authentication:
+            type: none
+        auth: passthrough
+  externalAccess:
+    type: loadBalancer
+    loadBalancer:
+      domain: ${GATEWAY_LB_HOST}

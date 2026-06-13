@@ -6,6 +6,7 @@ confluent_cloud_api_secret = "YOUR_CLOUD_API_SECRET"
 # Optional overrides:
 # environment_name = "zero-cut-migration"
 # cluster_name     = "zerocut-dest"
-# cloud            = "AWS"          # AWS | AZURE | GCP
-# region           = "us-east-2"
-# availability     = "HIGH"          # Enterprise requires HIGH (multi-zone)
+# cloud            = "GCP"            # AWS | AZURE | GCP
+# region           = "us-east1"      # matches the GCP demo box
+# availability     = "SINGLE_ZONE"   # SINGLE_ZONE (1 CKU min) | MULTI_ZONE (2 CKU min)
+# cku              = 1               # Dedicated cluster size

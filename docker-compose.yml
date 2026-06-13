@@ -1,0 +1,81 @@
+# Source for the zero-cut migration demo: a SELF-MANAGED single-node Confluent Server
+# (KRaft, no ZooKeeper). It stands in for any self-managed CP / MSK-style cluster you'd
+# migrate off of. The replication leg is a DESTINATION-INITIATED Cluster Link: Confluent
+# Cloud dials IN to this source. That works because the CC cluster sits in a GCP VPC
+# PEERING network whose CIDR is inside 10/8, and ohad-vpc already allows 10.0.0.0/8
+# internally — so CC reaches this broker at the box's private VPC IP (10.1.0.21:9094).
+#
+# Listeners:
+#   INTERNAL (cp-source:9092) — inter-broker, admin, topic init.
+#   EXTERNAL (:9094)          — what Confluent Cloud's cluster link, the CPC Gateway pods
+#                               (in minikube), and `kcp` (on the host) all connect to.
+#                               Advertised on the box's VPC IP (SOURCE_ADVERTISED_HOST,
+#                               default 10.1.0.21) and published on the host so all three
+#                               reach it: CC over the peering, gateway pods via the
+#                               minikube node's route to the host, kcp locally.
+#   CONTROLLER (:9093)        — KRaft controller.
+services:
+  kafka:
+    image: confluentinc/cp-server:7.7.1
+    container_name: cp-source
+    hostname: cp-source
+    ports:
+      - "9094:9094"
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@cp-source:9093
+      KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:9092,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://cp-source:9092,EXTERNAL://${SOURCE_ADVERTISED_HOST:-10.1.0.21}:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # Single-node: everything RF=1.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
+      # Single-broker safeguard: the Cluster Linking metadata topic defaults to RF=3,
+      # which can't be created with one broker (INVALID_REPLICATION_FACTOR). Force RF=1.
+      # (Belt-and-suspenders for destination-initiated, where the link lives on CC.)
+      KAFKA_CONFLUENT_CLUSTER_LINK_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_CONFLUENT_TELEMETRY_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server cp-source:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    networks:
+      default: {}
+      minikube:
+        ipv4_address: 192.168.49.50
+
+  # Creates the demo topic once the broker is healthy, then exits.
+  init-topics:
+    image: confluentinc/cp-server:7.7.1
+    container_name: zerocut-init-topics
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        kafka-topics --bootstrap-server cp-source:9092 \
+          --create --if-not-exists --topic ${DEMO_TOPIC:-orders} \
+          --partitions 6 --replication-factor 1
+        echo "created topic ${DEMO_TOPIC:-orders}"
+    restart: "no"
+    networks:
+      default: {}
+
+networks:
+  default: {}
+  # The pre-existing minikube docker network (created by `minikube start`); we attach
+  # the source so the in-cluster CPC Gateway can reach it at a stable IP.
+  minikube:
+    external: true
